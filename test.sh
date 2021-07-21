@@ -1,0 +1,39 @@
+#! /bin/bash
+
+#uses xrandr to find all connected monitors
+display_list=$(xrandr | grep " connected " | awk '{ print$1 }')
+
+#counts how many monitors are connected from display_list
+display_count=$(echo $display_list | wc -w)
+
+display=null
+brightness=1
+move_count=1
+
+echo -e "$display_list" | xargs -n1
+printf "\e[${display_count}A"
+
+while [ "$display" = null ]; do
+read -rsn1 input
+if [ "$input" = "A" ] && [ "$move_count" -gt 1 ]; then
+        printf '\e[A'
+        ((move_count=$move_count-1))
+elif [ "$input" = "B" ] && [ "$move_count" -lt "$display_count" ]; then
+        printf '\e[B'
+        ((move_count=$move_count+1))
+elif [ "$input" = "C" ]; then
+    display=$(echo "$display_list" | sed -n "${move_count}p")
+    printf '\e[2J\e[H'
+fi
+done
+
+#if up is pressed the brightness goes up and vice versa with down
+while [ "$display" != null ]; do
+read -rsn1 input
+if [ "$input" = "A" ]; then
+    brightness=$(echo "$brightness + 0.05" | bc -l)
+elif [ "$input" = "B" ]; then
+    brightness=$(echo "$brightness - 0.05" | bc -l)
+fi
+xrandr --output "$display" --brightness $brightness
+done
